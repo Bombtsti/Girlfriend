@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双标程度鉴定中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&family=ZCOOL+KuaiLe&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #f0f0f0;
+            --muted: #777;
+            --accent: #ff0044;
+            --accent2: #ffc400;
+            --card: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .fun-font {
+            font-family: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
+        }
+
+        /* 背景Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* 浮动光球 */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .orb1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 0, 68, 0.08);
+            top: -100px;
+            right: -100px;
+        }
+
+        .orb2 {
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 196, 0, 0.06);
+            bottom: -50px;
+            left: -80px;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: rgba(255, 0, 68, 0.05);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 页面 */
+        .page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .page.hidden {
+            opacity: 0;
+            transform: scale(0.96) translateY(20px);
+            pointer-events: none;
+        }
+
+        /* 开场 */
+        .main-title {
+            font-size: clamp(2.8rem, 9vw, 5.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            text-align: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            color: var(--muted);
+            text-align: center;
+            margin-top: 1.2rem;
+            max-width: 500px;
+            line-height: 1.8;
+        }
+
+        .warning-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .warning-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+            background: rgba(255, 0, 68, 0.1);
+            border: 1px solid rgba(255, 0, 68, 0.25);
+            border-radius: 50px;
+            color: #ff6b8a;
+        }
+
+        .start-btn {
+            margin-top: 2.5rem;
+            padding: 1.1rem 3.5rem;
+            font-size: 1.3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), #ff3366);
+            color: white;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 2px;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 50px rgba(255, 0, 68, 0.4);
+        }
+
+        .start-btn:active {
+            transform: scale(0.97);
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(45deg);
+            }
+        }
+
+        /* 进度条 */
+        .progress-wrap {
+            width: 100%;
+            max-width: 620px;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            transition: width 0.5s ease;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        /* 题目卡片 */
+        .question-card {
+            width: 100%;
+            max-width: 620px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            animation: cardIn 0.45s ease;
+        }
+
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .q-number {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            letter-spacing: 1px;
+        }
+
+        .q-text {
+            font-size: clamp(1.05rem, 2.8vw, 1.3rem);
+            font-weight: 700;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        /* 选项 */
+        .option-btn {
+            width: 100%;
+            text-align: left;
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 0.65rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--fg);
+            font-size: 0.92rem;
+            line-height: 1.6;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 0, 68, 0.08);
+            border-color: rgba(255, 0, 68, 0.4);
+            transform: translateX(5px);
+        }
+
+        .option-btn.selected {
+            background: rgba(255, 0, 68, 0.15);
+            border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(255, 0, 68, 0.12);
+        }
+
+        .opt-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .option-btn.selected .opt-letter {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* 结果页 */
+        .result-card {
+            width: 100%;
+            max-width: 620px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            animation: resultPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes resultPop {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+        }
+
+        .result-percent {
+            font-size: clamp(4rem, 16vw, 7rem);
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .result-title {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-weight: 900;
+            margin-top: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-desc {
+            font-size: 0.95rem;
+            line-height: 2;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: left;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .act-btn {
+            padding: 0.85rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .act-btn.primary {
+            background: linear-gradient(135deg, var(--accent), #ff3366);
+            color: white;
+        }
+
+        .act-btn.secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            border: 1px solid var(--border);
+        }
+
+        .act-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .act-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* 结果页背景色变化 */
+        .result-bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 0.9rem 2rem;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 0.9rem;
+            z-index: 200;
+            transition: transform 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 仪表盘SVG */
+        .gauge-svg {
+            margin: 0 auto 1rem;
+            display: block;
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .question-card {
+                padding: 1.25rem;
+            }
+
+            .result-card {
+                padding: 1.5rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 背景Canvas -->
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+    <!-- 浮动光球 -->
+    <div class="glow-orb orb1" aria-hidden="true"></div>
+    <div class="glow-orb orb2" aria-hidden="true"></div>
+    <div class="glow-orb orb3" aria-hidden="true"></div>
+
+    <!-- 结果背景色 -->
+    <div class="result-bg-overlay" id="resultBg" aria-hidden="true"></div>
+
+    <!-- ========== 开场页 ========== -->
+    <div class="page" id="startPage">
+        <div class="warning-strip">
+            <span class="warning-tag"><i class="fa-solid fa-triangle-exclamation"></i> 测出极端结果概不负责</span>
+            <span class="warning-tag"><i class="fa-solid fa-skull-crossbones"></i> 心理承受能力弱者慎入</span>
+            <span class="warning-tag"><i class="fa-solid fa-ban"></i> 请勿对号入座</span>
+        </div>
+        <h1 class="main-title fun-font" style="margin-top:1.5rem;">双标程度<br>鉴定中心</h1>
+        <p class="subtitle">本中心采用国际领先（并没有）的检测技术，通过 30 道灵魂拷问，精准鉴定你骨子里的双标含量。结果如有冒犯，那绝对是故意的。</p>
+        <p
+            style="color:var(--muted);font-size:0.85rem;margin-top:1rem;text-align:center;max-width:420px;line-height:1.7;">
+            全程约 3 分钟 · 共 30 题 · 10 种恶搞等级<br>请根据第一反应作答，想太多只会让你显得更双标
+        </p>
+        <button class="start-btn fun-font" onclick="startQuiz()" aria-label="开始测试">
+            开始接受审判
+        </button>
+    </div>
+
+    <!-- ========== 答题页 ========== -->
+    <div class="page hidden" id="quizPage">
+        <div class="progress-wrap">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <div class="progress-info">
+                <span id="progressLabel">第 1 / 30 题</span>
+                <span id="progressPercent">0%</span>
+            </div>
+        </div>
+        <div class="question-card" id="questionCard">
+            <div class="q-number" id="qNumber">QUESTION 01</div>
+            <div class="q-text" id="qText"></div>
+            <div id="optionsContainer"></div>
+        </div>
+    </div>
+
+    <!-- ========== 结果页 ========== -->
+    <div class="page hidden" id="resultPage">
+        <div class="result-card" id="resultCard">
+            <div class="result-label">你的双标程度鉴定结果</div>
+            <!-- SVG仪表盘 -->
+            <svg class="gauge-svg" width="220" height="130" viewBox="0 0 220 130" aria-hidden="true">
+                <path d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"
+                    stroke-linecap="round" />
+                <path id="gaugeFill" d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="var(--accent)"
+                    stroke-width="12" stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="283"
+                    style="transition: stroke-dashoffset 1.5s ease, stroke 0.5s;" />
+                <text id="gaugeText" x="110" y="108" text-anchor="middle" fill="var(--fg)" font-size="36"
+                    font-weight="900">0%</text>
+            </svg>
+            <div class="result-percent" id="resultPercent" style="display:none;"></div>
+            <div class="result-title fun-font" id="resultTitle"></div>
+            <div class="result-desc" id="resultDesc"></div>
+            <div class="action-btns">
+                <button class="act-btn primary" onclick="copyResult()" aria-label="复制结果">
+                    <i class="fa-solid fa-copy"></i>&nbsp; 骄傲地复制
+                </button>
+                <button class="act-btn secondary" onclick="restartQuiz()" aria-label="重新测试">
+                    <i class="fa-solid fa-rotate-right"></i>&nbsp; 重新鉴定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============ 粒子背景 ============
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 60;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.4;
+                this.speedY = (Math.random() - 0.5) * 0.3 - 0.15;
+                this.opacity = Math.random() * 0.4 + 0.1;
+                this.color = Math.random() > 0.6 ? '#ff0044' : '#ffc400';
+                this.life = Math.random() * 300 + 200;
+                this.maxLife = this.life;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+                if (this.life <= 0 || this.x < -10 || this.x > canvas.width + 10 || this.y < -10 || this.y > canvas.height + 10) {
+                    this.reset();
+                }
+            }
+            draw() {
+                const fadeRatio = Math.min(this.life / this.maxLife, (this.maxLife - this.life) / 50);
+                const alpha = this.opacity * Math.max(0, Math.min(1, fadeRatio));
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+                ctx.fillStyle = this.color.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('#ff0044', `rgba(255,0,68,${alpha})`).replace('#ffc400', `rgba(255,196,0,${alpha})`);
+                // 简化颜色处理
+                if (this.color === '#ff0044') {
+                    ctx.fillStyle = `rgba(255,0,68,${alpha})`;
+                } else {
+                    ctx.fillStyle = `rgba(255,196,0,${alpha})`;
+                }
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // ============ 题目数据 ============
+        const questions = [
+            {
+                q: "你和对象吵架生气了，你们俩谁的错？",
+                o: [
+                    "谁错就是谁的错，对事不对人",
+                    "我生气肯定是被惹到了，TA生气多半是在无理取闹",
+                    "我生气叫委屈需要被哄，TA生气叫脾气大不成熟",
+                    "我生气TA必须立刻滑跪道歉！TA敢生气？TA有什么资格生气？！"
+                ]
+            },
+            {
+                q: "关于回消息的速度，你和对象谁更该被原谅？",
+                o: [
+                    "谁忙谁就晚点回，互相理解",
+                    "我没回是在忙正事，TA没回...是不是在跟别人聊天？",
+                    "我已读不回是忘了，TA已读不回就是不在乎我了！",
+                    "我半天不回叫独立空间，TA三分钟不回我直接夺命连环call加分手警告"
+                ]
+            },
+            {
+                q: "你来大姨妈（或身体不适）vs 对象生病了，怎么处理？",
+                o: [
+                    "都不舒服，互相照顾",
+                    "我痛得死去活来必须被伺候，TA就一个感冒多喝热水就行了",
+                    "我不舒服TA必须请假陪我，TA不舒服别传染给我离我远点",
+                    "我来大姨妈是世界级灾难TA得捧着我，TA来'大姨夫'矫情什么？男人也配喊痛？"
+                ]
+            },
+            {
+                q: "关于和异性朋友保持联系，你怎么看？",
+                o: [
+                    "一样的要求，都有交友自由，保持边界就行",
+                    "我的异性朋友都是认识多年的好哥们/好闺蜜，TA的异性朋友怎么看都像绿茶/渣男",
+                    "我跟异性聊天叫正常社交，TA跟异性聊天叫精神出轨",
+                    "我列表里有一百个异性也是人缘好，TA敢多看别的异性一眼就是绿帽预备役！"
+                ]
+            },
+            {
+                q: "走在街上看到帅哥/美女，你和对象谁可以看？",
+                o: [
+                    "谁看都无所谓，欣赏美是人的天性",
+                    "我偷偷瞄两眼是审美，TA盯着看我就不舒服了",
+                    "我看叫欣赏美丽事物，TA看叫色眯眯不正经",
+                    "我看帅哥/美女叫目光正常停留，TA敢转头看别人？眼珠子给我抠出来！"
+                ]
+            },
+            {
+                q: "你和同事都迟到了，你的内心想法是？",
+                o: [
+                    "我们都该反思一下时间管理",
+                    "我是真堵车了，他嘛...不好说",
+                    "我迟到是天意，他迟到是态度问题",
+                    "迟到是我的自由！但他迟到就是不尊重人！"
+                ]
+            },
+            {
+                q: "你发的朋友圈没人点赞，别人的朋友圈点赞过百，你怎么想？",
+                o: [
+                    "可能他的内容更有趣吧",
+                    "我发的是生活记录，他们发的是媚俗内容",
+                    "朋友圈这些人审美有问题，看不出我的高级",
+                    "我发没人看是世道不行，他发有人赞肯定是充了会员"
+                ]
+            },
+            {
+                q: "关于借钱这件事，你最认同哪种说法？",
+                o: [
+                    "借了就该还，不管是谁都一样",
+                    "我借钱是真有困难，别人借钱谁知道干啥去了",
+                    "我借钱不还是真还不上，别人借钱不还就是人品差",
+                    "借我的钱我可以慢慢还，但我借出去的钱你最好明天就还"
+                ]
+            },
+            {
+                q: "关于回消息的速度，你怎么看？",
+                o: [
+                    "没回就是在忙，互相理解",
+                    "我没回是在忙正事，别人没回我...是不是故意的？",
+                    "我不回消息是在享受独处，别人不回我消息是在侮辱我",
+                    "我已读不回是常态，别人已读不回我直接拉黑"
+                ]
+            },
+            {
+                q: "上班摸鱼这件事，你怎么看？",
+                o: [
+                    "都不应该摸鱼，拿了工资就要干活",
+                    "我摸鱼是劳逸结合提高效率，别人摸鱼就是混日子",
+                    "我摸鱼是因为工作效率高提前完成了，他摸鱼就是偷懒",
+                    "我上班摸鱼叫合理利用时间，别人摸鱼叫对不起公司栽培"
+                ]
+            },
+            {
+                q: "关于减肥失败这件事，你最真实的想法？",
+                o: [
+                    "减肥靠自律，对谁都一样",
+                    "我减不下来是因为基因和压力，别人减不下来就是管不住嘴",
+                    "我是易胖体质真没办法，他就是个没有自制力的胖子",
+                    "我胖叫丰满可爱有福相，别人胖嘛...你自己心里有数"
+                ]
+            },
+            {
+                q: "考试你考砸了，别人也考砸了，你想？",
+                o: [
+                    "都没考好，一起复盘一下吧",
+                    "我考砸是发挥失常，他考砸...本来就是那水平",
+                    "我这次是状态不好，他考砸是智商税交多了",
+                    "我考砸了是题目有问题，他考砸了是人有问题"
+                ]
+            },
+            {
+                q: "开车加塞这件事，你怎么看？",
+                o: [
+                    "加塞都不对，不管是谁",
+                    "我加塞是真有急事，别人加塞就是没素质",
+                    "我加塞叫技术好见缝插针，别人加塞叫马路杀手",
+                    "我加塞你们就该让着我，别人加塞我直接撞上去"
+                ]
+            },
+            {
+                q: "约会时玩手机这件事，你怎么看？",
+                o: [
+                    "都不该玩手机，尊重对方",
+                    "我玩是在回重要消息，对方玩就不能专心点吗？",
+                    "我玩手机是因为你聊的话题无聊，你玩手机是对我不尊重",
+                    "我玩手机叫社交需求，你玩手机叫心不在焉"
+                ]
+            },
+            {
+                q: "关于赖床这件事，你怎么看？",
+                o: [
+                    "赖床不好，谁赖都不好",
+                    "我赖床是因为太累了需要休息，室友赖床就是懒",
+                    "我赖床叫享受生活，室友赖床叫浪费生命",
+                    "我赖床你管得着吗？室友赖床我八点就开始放音乐"
+                ]
+            },
+            {
+                q: "关于买贵的东西，你怎么看？",
+                o: [
+                    "花钱要看性价比，谁都一样",
+                    "我买贵的叫投资自己，别人买贵的就是虚荣",
+                    "我买是因为真的需要且品质好，别人买就是跟风",
+                    "我消费叫提升生活品质，别人消费叫败家"
+                ]
+            },
+            {
+                q: "犯了同样的错误，你怎么看？",
+                o: [
+                    "错了就是错了，谁犯都应该承认",
+                    "我犯错是情有可原，别人犯错就怎么这么粗心",
+                    "我犯错叫成长必经之路，别人犯错叫屡教不改",
+                    "我犯错叫人非圣贤孰能无过，别人犯错叫狗改不了吃屎"
+                ]
+            },
+            {
+                q: "喝酒发酒疯这件事，你怎么看？",
+                o: [
+                    "喝多了发疯都不好",
+                    "我喝多了是真情流露，别人喝多了就是耍酒疯",
+                    "我喝多了叫豪爽，别人喝多了叫丢人现眼",
+                    "我发酒疯你们要包容我，别人发酒疯我直接报警"
+                ]
+            },
+            {
+                q: "撒谎这件事，你怎么看？",
+                o: [
+                    "谎言就是谎言，谁撒都不对",
+                    "我撒谎是善意的，别人撒谎就是欺骗",
+                    "我撒谎是为了不伤害别人，别人撒谎就是为了害我",
+                    "我说谎叫圆滑世故高情商，别人说谎叫虚伪狡诈小人"
+                ]
+            },
+            {
+                q: "打游戏发脾气这件事，你怎么看？",
+                o: [
+                    "游戏而已，谁发脾气都不好",
+                    "我发脾气是被队友坑急了，队友发脾气就是素质低",
+                    "我发脾气叫竞技精神，队友发脾气叫脑子有病",
+                    "我摔键盘是因为太投入，队友摔键盘建议去看精神科"
+                ]
+            },
+            {
+                q: "吃饭吧唧嘴这件事，你怎么看？",
+                o: [
+                    "吧唧嘴都不好，注意餐桌礼仪",
+                    "我吧唧嘴是东西太好吃了，别人吧唧嘴能不能闭嘴？",
+                    "我吧唧嘴叫享受美食，别人吧唧嘴叫猪吃食",
+                    "我吃东西响说明你做的好吃，别人吃东西响我想掀桌"
+                ]
+            },
+            {
+                q: "放鸽子这件事，你怎么看？",
+                o: [
+                    "放谁鸽子都不好",
+                    "我放鸽子是真有事，别人放鸽子就是不守信",
+                    "我放鸽子叫计划赶不上变化，别人放鸽子叫不靠谱",
+                    "我放你鸽子你要理解我，你放我鸽子咱们友尽"
+                ]
+            },
+            {
+                q: "熬夜追剧这件事，你怎么看？",
+                o: [
+                    "熬夜伤身，谁熬都不好",
+                    "我熬夜是这部剧太好看了，别人熬夜就是没自制力",
+                    "我熬夜追剧叫追求精神生活，别人熬夜叫虚度光阴",
+                    "我熬夜说明我精力旺盛，别人熬夜说明生活作息混乱"
+                ]
+            },
+            {
+                q: "买奢侈品这件事，你怎么看？",
+                o: [
+                    "理性消费，谁都一样",
+                    "我买是因为真的喜欢且保值，别人买就是装",
+                    "我买奢侈品叫奖励自己，别人买叫打肿脸充胖子",
+                    "我背是真货有品位，别人背一看就是A货"
+                ]
+            },
+            {
+                q: "说话很大声这件事，你怎么看？",
+                o: [
+                    "公共场合都不该大声",
+                    "我大声是因为环境太吵或太激动，别人大声就是没教养",
+                    "我大声叫热情奔放，别人大声叫噪音污染",
+                    "我说话大声叫气场强大，别人说话大声叫扰民"
+                ]
+            },
+            {
+                q: "停车占了两个车位这件事，你怎么看？",
+                o: [
+                    "谁占都不对",
+                    "我占两个位是技术不好没办法，别人占就是自私",
+                    "我停不好是因为车位太窄，别人停不好是因为驾照买的",
+                    "我占两个位是我的实力允许，别人占两个位我直接划车"
+                ]
+            },
+            {
+                q: "公共场合外放手机这件事，你怎么看？",
+                o: [
+                    "谁外放都不好，请戴耳机",
+                    "我外放是因为实在找不到耳机了，别人外放就是没素质",
+                    "我外放的声音好听所以无所谓，别人外放简直是精神污染",
+                    "我外放叫分享快乐，别人外放我直接12345投诉"
+                ]
+            },
+            {
+                q: "插队这件事，你怎么看？",
+                o: [
+                    "谁插队都不对",
+                    "我插队是真的赶时间，别人插队就是不要脸",
+                    "我插队叫灵活变通，别人插队叫道德败坏",
+                    "我插队你们就该通融一下，别人插队我当场开骂"
+                ]
+            },
+            {
+                q: "晒娃/晒宠物这件事，你怎么看？",
+                o: [
+                    "适度就好，谁都一样",
+                    "我晒是因为真的可爱值得记录，别人晒也没那么可爱吧",
+                    "我家宝贝发出来是给大家福利，别人家的别发了求求了",
+                    "我晒叫记录成长，别人晒叫刷屏污染我的朋友圈"
+                ]
+            },
+            {
+                q: "工作出差错这件事，你怎么看？",
+                o: [
+                    "错了就认，谁都一样",
+                    "我出错是因为任务太急信息不全，别人出错就是能力不行",
+                    "我的失误叫试错成本，别人的失误叫能力不达标",
+                    "我犯错领导要理解包容，别人犯错应该直接开除"
+                ]
+            },
+            {
+                q: "图书馆占座这件事，你怎么看？",
+                o: [
+                    "占座都不好",
+                    "我占座是因为我马上就回来，别人占座就是浪费资源",
+                    "我占座叫合理规划学习时间，别人占座叫霸占公共资源",
+                    "我占的座就是我的领地，别人占的座我直接把书收走"
+                ]
+            },
+            {
+                q: "旅游发照片刷屏这件事，你怎么看？",
+                o: [
+                    "适度分享就好",
+                    "我发是因为风景真的美，别人发就是炫耀",
+                    "我旅游发图叫带你们看世界，别人发图叫俗不可耐",
+                    "我刷屏叫分享快乐不想看可以屏蔽，别人刷屏我直接拉黑"
+                ]
+            },
+            {
+                q: "溺爱孩子/宠物这件事，你怎么看？",
+                o: [
+                    "过度溺爱不好",
+                    "我宠是因为我家宝贝值得，别人宠就是惯坏了",
+                    "我家孩子/宠物是特殊需要关爱，别人家的就是被惯了一身毛病",
+                    "我溺爱叫满满的父爱母爱，别人溺爱叫养出熊孩子恶犬"
+                ]
+            },
+            {
+                q: "不洗碗这件事，你怎么看？",
+                o: [
+                    "家务应该一起分担",
+                    "我不洗碗是真的太累了，室友不洗碗就不能勤快一点吗？",
+                    "我不洗碗叫合理休息，室友不洗碗叫好吃懒做",
+                    "我不洗碗你要体谅我，室友不洗碗我拍照发群里公开处刑"
+                ]
+            },
+            {
+                q: "通宵打游戏这件事，你怎么看？",
+                o: [
+                    "通宵都不健康",
+                    "我通宵是因为周末放松，室友通宵就是网瘾少年",
+                    "我通宵叫热血青春，室友通宵叫虚度人生",
+                    "我通宵你敢管我？室友通宵我直接拔网线"
+                ]
+            }
+        ];
+
+        // ============ 结果数据 ============
+        const results = [
+            {
+                range: [0, 10], title: "活菩萨转世", color: "#00e676",
+                desc: "你双标程度几乎为零，让人怀疑你是不是被编程出来的NPC。你对所有人都一视同仁？这简直违反了人类的基本生存本能！建议去医院检查一下共情能力过剩综合征。你对蚊子被拍死是不是都默哀三秒？你这种人出现在双标测试里，就像和尚进了酒吧——格格不入。你的存在让其他双标选手感到了深深的愧疚，求你赶紧走开！"
+            },
+            {
+                range: [10, 20], title: "居委会荣誉标兵", color: "#66bb6a",
+                desc: "你那点双标含量就跟素食餐厅里的苍蝇一样稀少。你大概就是那种当纪律委员还自己带头守纪律的异类吧？社会不适合你这种老实人，建议回火星去。你以为你很正义？其实只是还没遇到真正考验你的人性时刻。等你室友半夜三点外放抖音的时候，我看你还装不装圣人！"
+            },
+            {
+                range: [20, 30], title: "微双标实习实习生", color: "#c6ff00",
+                desc: "你的双标水平约等于小学生第一次说谎——拙劣且容易被识破。你偶尔偷偷双标一下，但马上心虚得像偷吃零食还擦嘴的小朋友。你以为自己藏得很好？拜托，你的双标都写在脸上了，比你脸上的痘还明显。回去多练练吧，你连双标都双标不好，真是干啥啥不行。"
+            },
+            {
+                range: [30, 40], title: "选择性失明初级患者", color: "#ffab00",
+                desc: "恭喜，你的双标技能开始萌芽了！你已经学会了'对自己宽容对别人严苛'的基本功，但火候还差得远。你的双标就像你厨艺一样——自己觉得还行，别人一吃就知道不对劲。你那点段位在双标界连门都进不去，顶多在门口卖烤地瓜。继续加油，你离真正让人讨厌还有很长的路！"
+            },
+            {
+                range: [40, 50], title: "双标中级技工", color: "#ff6d00",
+                desc: "你已经能熟练运用'我这是特殊情况'这句话了，脸皮厚度堪比城墙拐角。你开始对自己的双标有了一点自觉，但你选择——继续双标！你的逻辑是：我知道我双标了，但我不承认不就等于没有？这种自欺欺人的本事建议写入简历，标题就叫'灵活的逻辑思维能力'。你的双标已经像发际线一样，自己看不见但别人看得一清二楚。"
+            },
+            {
+                range: [50, 60], title: "双标资深专家", color: "#ff3d00",
+                desc: "你的逻辑回路已形成完美自洽闭环：我对是因为我是我，你错是因为你是你。这种能力不是一般人能有的，你天生适合去当辩论赛选手——连黑的说成白的都不带脸红的。你的双重标准比双下巴还多，而且每一个都用得理直气壮。佩服佩服，建议纳入非物质文化遗产。"
+            },
+            {
+                range: [60, 70], title: "双标宗师", color: "#dd2c00",
+                desc: "你已经可以面不改色心不跳地说出'这能一样吗'五个字了，建议出书《双标的艺术》，销量一定超《人性的弱点》。你的双标水平已到出神入化地步，连自己都信了自己的鬼话。你就是那种自己闯红灯叫灵活变通，别人闯红灯叫漠视生命的人吧？建议申请非遗传承人——传承项目：双标。"
+            },
+            {
+                range: [70, 80], title: "人形双标行走器", color: "#ff1744",
+                desc: "你就是一台永不停歇的双标发电机！你的双重标准比年龄还大，比社交账号还多。你衡量自己和别人的尺子，长度差了大概一个银河系。你就是那种自己放屁叫生理现象别人放屁叫道德沦丧的人。你周围的人不是已经和你绝交就是在绝交的路上。建议身上挂个警示牌：前方高能双标区域请保持安全距离。"
+            },
+            {
+                range: [80, 90], title: "双标病毒超级传播者", color: "#d50000",
+                desc: "离你三米之内的人都会被双标气场感染，WHO已把你列入一级观察名单。你不仅是双标实践者还是传播者，说的每句话都在给周围人洗脑。你的存在就像双标WiFi信号覆盖极广且无法屏蔽。你衡量是非的标准只有一个：是不是我干的。是你干的就永远正确，不是你干的就十恶不赦。建议联合国给你设个国际双标日。"
+            },
+            {
+                range: [90, 100], title: "宇宙双标之王", color: "#b71c1c",
+                desc: "你就是双标本标！双标界的珠穆朗玛峰！你的双重标准已超越人类认知极限达到宇宙级别。你呼吸都是双标的：你呼出的二氧化碳是对大自然的贡献，别人呼出的是环境污染。建议把自己封为宇宙中心，地球围着你转已是不争事实。你照镜子是不是觉得镜中自己永远是对的？你的双标浓度可以当化学武器了。恭喜你，你是这个测试里最让人血压飙升的存在！"
+            }
+        ];
+
+        // ============ 状态 ============
+        let currentQ = 0;
+        let totalScore = 0;
+        let isTransitioning = false;
+        let shuffledQuestions = []; // 新增：存放打乱后的题目
+        // 新增：Fisher-Yates 洗牌算法
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // ============ 页面切换 ============
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            setTimeout(() => {
+                document.getElementById(pageId).classList.remove('hidden');
+            }, 100);
+        }
+
+        // ============ 开始测试 ============
+        function startQuiz() {
+            currentQ = 0;
+            totalScore = 0;
+            shuffledQuestions = shuffle(questions); // 新增：打乱题目
+            showPage('quizPage');
+            setTimeout(() => renderQuestion(), 150);
+        }
+
+        // ============ 渲染题目 ============
+        function renderQuestion() {
+            const q = shuffledQuestions[currentQ]; // 改为用打乱后的数组
+            const card = document.getElementById('questionCard');
+
+            // 触发重新动画
+            card.style.animation = 'none';
+            card.offsetHeight; // reflow
+            card.style.animation = 'cardIn 0.45s ease';
+
+            document.getElementById('qNumber').textContent = `QUESTION ${String(currentQ + 1).padStart(2, '0')}`;
+            document.getElementById('qText').textContent = q.q;
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            const letters = ['A', 'B', 'C', 'D'];
+            q.o.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="opt-letter">${letters[idx]}</span><span>${opt}</span>`;
+                btn.setAttribute('aria-label', `选项${letters[idx]}: ${opt}`);
+                btn.addEventListener('click', () => selectOption(idx, btn));
+                container.appendChild(btn);
+            });
+
+            // 更新进度
+            const pct = Math.round((currentQ / questions.length) * 100);
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressLabel').textContent = `第 ${currentQ + 1} / ${questions.length} 题`;
+            document.getElementById('progressPercent').textContent = pct + '%';
+        }
+
+        // ============ 选择选项 ============
+        function selectOption(idx, btn) {
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            // 标记选中
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            // 累加分数 (索引+1)
+            totalScore += (idx + 1);
+
+            // 延迟进入下一题
+            setTimeout(() => {
+                currentQ++;
+                if (currentQ < questions.length) {
+                    renderQuestion();
+                } else {
+                    // 完成：更新进度条到100%
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('progressPercent').textContent = '100%';
+                    document.getElementById('progressLabel').textContent = `第 ${questions.length} / ${questions.length} 题`;
+                    setTimeout(() => showResult(), 400);
+                }
+                isTransitioning = false;
+            }, 500);
+        }
+
+        // ============ 显示结果 ============
+        function showResult() {
+            // 计算百分比
+            const minScore = shuffledQuestions.length;
+            const maxScore = shuffledQuestions.length * 4;
+            const percentage = Math.round(((totalScore - minScore) / (maxScore - minScore)) * 100);
+
+            // 找到对应结果
+            let resultIdx = Math.min(Math.floor(percentage / 10), 9);
+            if (percentage === 0) resultIdx = 0;
+            const result = results[resultIdx];
+
+            // 设置结果内容
+            const gaugeFill = document.getElementById('gaugeFill');
+            const gaugeText = document.getElementById('gaugeText');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDesc = document.getElementById('resultDesc');
+
+            resultTitle.textContent = result.title;
+            resultTitle.style.color = result.color;
+            resultDesc.textContent = result.desc;
+            resultDesc.style.borderLeftColor = result.color;
+
+            // 仪表盘动画
+            const totalArc = 283; // 半圆弧长
+            const offset = totalArc - (totalArc * percentage / 100);
+            gaugeFill.style.stroke = result.color;
+            gaugeFill.style.strokeDashoffset = String(totalArc); // 先重置
+
+            // 背景色变化
+            const resultBg = document.getElementById('resultBg');
+            resultBg.style.background = `radial-gradient(ellipse at center, ${result.color}22, transparent 70%)`;
+            resultBg.style.opacity = '1';
+
+            // 显示结果页
+            showPage('resultPage');
+
+            // 延迟启动动画
+            setTimeout(() => {
+                gaugeFill.style.strokeDashoffset = String(offset);
+                // 数字递增动画
+                animateNumber(gaugeText, 0, percentage, 1500, result.color);
+            }, 300);
+        }
+
+        // ============ 数字递增动画 ============
+        function animateNumber(el, from, to, duration, color) {
+            const start = performance.now();
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                // easeOutCubic
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.round(from + (to - from) * eased);
+                el.textContent = current + '%';
+                el.setAttribute('fill', color);
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        // ============ 复制结果 ============
+        function copyResult() {
+            const percentage = Math.round(((totalScore - questions.length) / (questions.length * 3)) * 100);
+            let resultIdx = Math.min(Math.floor(percentage / 10), 9);
+            if (percentage === 0) resultIdx = 0;
+            const result = results[resultIdx];
+
+            const text = `【双标程度鉴定结果】\n双标程度：${percentage}%\n称号：${result.title}\n${result.desc}\n\n快来测测你的双标程度有多高！`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('结果已复制，快去丢人吧！');
+            }).catch(() => {
+                // 降级方案
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('结果已复制，快去丢人吧！');
+            });
+        }
+
+        // ============ 重新测试 ============
+        function restartQuiz() {
+            // 重置背景
+            document.getElementById('resultBg').style.opacity = '0';
+            // 重置仪表盘
+            document.getElementById('gaugeFill').style.strokeDashoffset = '283';
+            showPage('startPage');
+        }
+
+        // ============ Toast ============
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // ============ 键盘支持 ============
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('quizPage').classList.contains('hidden')) return;
+            const keyMap = { '1': 0, '2': 1, '3': 2, '4': 3, 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
+            const idx = keyMap[e.key.toLowerCase()];
+            if (idx !== undefined && !isTransitioning) {
+                const btns = document.querySelectorAll('.option-btn');
+                if (btns[idx]) btns[idx].click();
+            }
+        });
+    </script>
+</body>
+
+</html>
